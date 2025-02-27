@@ -8,29 +8,33 @@ import (
 )
 
 type PlayerCreature struct {
-	xpos  float32
-	ypos  float32
-	speed float32
-	size  float32
-	value float32 //point value for creature
-	color rl.Color
+	xpos    float32
+	ypos    float32
+	speed   float32
+	size    float32
+	value   float32 //point value for creature
+	color   rl.Color
+	texture rl.Texture2D
 }
 
 // New Creature containing values from PlayerCreature struct
-func NewCreature(xpos, ypos, speed, size, value float32, color rl.Color) PlayerCreature {
+func NewCreature(xpos, ypos, speed, size, value float32, color rl.Color, texture rl.Texture2D) PlayerCreature {
 	return PlayerCreature{
-		xpos:  xpos,
-		ypos:  ypos,
-		speed: speed,
-		size:  size,
-		value: value,
-		color: color,
+		xpos:    xpos,
+		ypos:    ypos,
+		speed:   speed,
+		size:    size,
+		value:   value,
+		color:   color,
+		texture: texture,
 	}
 }
 
 // function to draw creature from the PlayerCreature struct
 func (c PlayerCreature) DrawCreature() {
-	rl.DrawRectangle(int32(c.xpos), int32(c.ypos), int32(c.size), int32(c.size), c.color)
+	scale := c.size / float32(c.texture.Width) //scale factor based on size
+	rl.DrawTextureEx(c.texture, rl.Vector2{X: c.xpos, Y: c.ypos}, 0, scale, rl.White)
+	rl.DrawText(fmt.Sprintf("%d", int(c.value)), int32(c.xpos-10), int32(c.ypos-10), 20, rl.Black) //text of the point value
 }
 
 // function to move the creature
@@ -55,20 +59,25 @@ func (c *PlayerCreature) Move(xOffset, yOffset float32) {
 }
 
 // function to check if two creatures overlap
+// TODO: add in functionality to detect when the player collides with the enemy
 func checkOverlap(a, b PlayerCreature) bool {
 	return a.xpos < b.xpos+b.size && a.xpos+a.size > b.xpos &&
 		a.ypos < b.ypos+b.size && a.ypos+a.size > b.ypos
 }
 
 func main() {
-	rl.InitWindow(800, 400, "Weekly Project 5 Mini Game")
+	rl.InitWindow(1980, 1080, "Weekly Project 5 Mini Game")
 
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
 
+	// picture for creatures
+	creatureImage := rl.LoadTexture("C:/_dev/Go/cs4953/WeeklyProject5/WeeklyProject5cs4953/Textures/Mouse.png")
+	defer rl.UnloadTexture(creatureImage)
+
 	//initialize player creature outside of the game loop
-	player := NewCreature(100, 100, 200, 50, 1, rl.Beige)
+	player := NewCreature(50, 50, 200, 50, 1, rl.Red, creatureImage)
 
 	//slice to hold the enemy creatures
 	enemyCreatures := make([]PlayerCreature, 0)
@@ -86,11 +95,16 @@ func main() {
 			y := float32(rand.IntN(rl.GetScreenHeight() - int(enemySize)))
 
 			newCreature = NewCreature(
-				x, y, 0, enemySize, float32(i+1), rl.Red,
+				x, y, 0, enemySize, float32(i+1), rl.Red, creatureImage,
 			)
 
 			//assuming no overlapping
 			overlapping = false
+
+			//check overlap with player
+			if checkOverlap(newCreature, player) {
+				overlapping = true
+			}
 
 			//check previously added creatures
 			for _, existing := range enemyCreatures {
@@ -127,19 +141,15 @@ func main() {
 		//player movement
 		if rl.IsKeyPressed(rl.KeyW) {
 			player.Move(0, -50)
-			fmt.Println("W Key Pressed")
 		}
 		if rl.IsKeyPressed(rl.KeyS) {
 			player.Move(0, 50)
-			fmt.Println("S Key Pressed")
 		}
 		if rl.IsKeyPressed(rl.KeyA) {
 			player.Move(-50, 0)
-			fmt.Println("A Key Pressed")
 		}
 		if rl.IsKeyPressed(rl.KeyD) {
 			player.Move(50, 0)
-			fmt.Println("D Key Pressed")
 		}
 		rl.EndDrawing()
 	}
