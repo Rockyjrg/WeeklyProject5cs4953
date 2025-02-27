@@ -54,8 +54,14 @@ func (c *PlayerCreature) Move(xOffset, yOffset float32) {
 	}
 }
 
+// function to check if two creatures overlap
+func checkOverlap(a, b PlayerCreature) bool {
+	return a.xpos < b.xpos+b.size && a.xpos+a.size > b.xpos &&
+		a.ypos < b.ypos+b.size && a.ypos+a.size > b.ypos
+}
+
 func main() {
-	rl.InitWindow(1980, 1080, "Weekly Project 5 Mini Game")
+	rl.InitWindow(800, 400, "Weekly Project 5 Mini Game")
 
 	defer rl.CloseWindow()
 
@@ -66,11 +72,45 @@ func main() {
 
 	//slice to hold the enemy creatures
 	enemyCreatures := make([]PlayerCreature, 0)
-	//make 5 random creatures
+	enemySize := float32(50)
+
 	for i := 0; i < 5; i++ {
-		enemyCreatures = append(enemyCreatures, NewCreature(float32(rand.IntN(rl.GetScreenWidth())), float32(rand.IntN(rl.GetScreenHeight())), float32(0), float32(50), float32(1), rl.Red))
+		var newCreature PlayerCreature
+		var overlapping bool
+
+		//keep generating until valid position where no overlapping is found
+		for {
+
+			//ensuring creatures don't spawn out of bounds
+			x := float32(rand.IntN(rl.GetScreenWidth() - int(enemySize)))
+			y := float32(rand.IntN(rl.GetScreenHeight() - int(enemySize)))
+
+			newCreature = NewCreature(
+				x, y, 0, enemySize, float32(i+1), rl.Red,
+			)
+
+			//assuming no overlapping
+			overlapping = false
+
+			//check previously added creatures
+			for _, existing := range enemyCreatures {
+				if checkOverlap(newCreature, existing) {
+					overlapping = true
+					break //stop if overlapping has occurred
+				}
+			}
+
+			//if no overlapping, break out of loop
+			if !overlapping {
+				break
+			}
+		}
+
+		//add new non-overlapping creature to the slice
+		enemyCreatures = append(enemyCreatures, newCreature)
 	}
 
+	//start drawing
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 
