@@ -1,18 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand/v2"
+	"os"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type PlayerCreature struct {
-	xpos    float32
-	ypos    float32
-	speed   float32
+	Xpos    float32
+	Ypos    float32
+	Speed   float32
 	size    float32
-	value   float32 //point value for creature
+	Value   float32 //point value for creature
 	color   rl.Color
 	texture rl.Texture2D
 }
@@ -20,11 +22,11 @@ type PlayerCreature struct {
 // New Creature containing values from PlayerCreature struct
 func NewCreature(xpos, ypos, speed, size, value float32, color rl.Color, texture rl.Texture2D) PlayerCreature {
 	return PlayerCreature{
-		xpos:    xpos,
-		ypos:    ypos,
-		speed:   speed,
+		Xpos:    xpos,
+		Ypos:    ypos,
+		Speed:   speed,
 		size:    size,
-		value:   value,
+		Value:   value,
 		color:   color,
 		texture: texture,
 	}
@@ -33,35 +35,35 @@ func NewCreature(xpos, ypos, speed, size, value float32, color rl.Color, texture
 // function to draw creature from the PlayerCreature struct
 func (c PlayerCreature) DrawCreature() {
 	scale := c.size / float32(c.texture.Width) //scale factor based on size
-	rl.DrawTextureEx(c.texture, rl.Vector2{X: c.xpos, Y: c.ypos}, 0, scale, c.color)
-	rl.DrawText(fmt.Sprintf("%d", int(c.value)), int32(c.xpos-10), int32(c.ypos-10), 20, rl.Black) //text of the point value
+	rl.DrawTextureEx(c.texture, rl.Vector2{X: c.Xpos, Y: c.Ypos}, 0, scale, c.color)
+	rl.DrawText(fmt.Sprintf("%d", int(c.Value)), int32(c.Xpos-10), int32(c.Ypos-10), 20, rl.Black) //text of the point value
 }
 
 // function to move the creature
 func (c *PlayerCreature) Move(xOffset, yOffset float32) {
-	c.xpos += xOffset //* c.speed * rl.GetFrameTime()
-	c.ypos += yOffset //* c.speed * rl.GetFrameTime()
+	c.Xpos += xOffset //* c.speed * rl.GetFrameTime()
+	c.Ypos += yOffset //* c.speed * rl.GetFrameTime()
 
 	//top and bottom boundaries
-	if c.ypos < 0 {
-		c.ypos = 0
+	if c.Ypos < 0 {
+		c.Ypos = 0
 	}
-	if c.ypos+c.size > float32(rl.GetScreenHeight()) {
-		c.ypos = float32(rl.GetScreenHeight()) - c.size
+	if c.Ypos+c.size > float32(rl.GetScreenHeight()) {
+		c.Ypos = float32(rl.GetScreenHeight()) - c.size
 	}
 	//left and right boundaries
-	if c.xpos < 0 {
-		c.xpos = 0
+	if c.Xpos < 0 {
+		c.Xpos = 0
 	}
-	if c.xpos+c.size > float32(rl.GetScreenWidth()) {
-		c.xpos = float32(rl.GetScreenWidth()) - c.size
+	if c.Xpos+c.size > float32(rl.GetScreenWidth()) {
+		c.Xpos = float32(rl.GetScreenWidth()) - c.size
 	}
 }
 
 // function to check if two creatures overlap
 func checkOverlap(a, b PlayerCreature) bool {
-	return a.xpos < b.xpos+b.size && a.xpos+a.size > b.xpos &&
-		a.ypos < b.ypos+b.size && a.ypos+a.size > b.ypos
+	return a.Xpos < b.Xpos+b.size && a.Xpos+a.size > b.Xpos &&
+		a.Ypos < b.Ypos+b.size && a.Ypos+a.size > b.Ypos
 }
 
 // function to restart the game state
@@ -110,6 +112,25 @@ func resetGame(creatureImage rl.Texture2D, enemySize float32) (PlayerCreature, [
 		enemyCreatures = append(enemyCreatures, newCreature)
 	}
 	return player, enemyCreatures, false //reset player, enemy creatures, and gameOver state
+}
+
+func (c *PlayerCreature) Save(filename string) error {
+	data, err := json.MarshalIndent(c, "", " ")
+	fmt.Println("Saving...")
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return os.WriteFile(filename+".json", data, 0644)
+}
+
+func (c *PlayerCreature) Load(filename string) error {
+	data, err := os.ReadFile(filename + ".json")
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return json.Unmarshal(data, c)
 }
 
 func main() {
@@ -223,12 +244,21 @@ func main() {
 				player.Move(50, 0)
 			}
 
+			//save function?
+			if rl.IsKeyPressed(rl.KeyP) {
+				player.Save("SaveFile")
+
+			}
+			if rl.IsKeyPressed(rl.KeyL) {
+				player.Load("SaveFile")
+			}
+
 			//check collisions with enemy creatures
 			for i := 0; i < len(enemyCreatures); i++ {
 				if checkOverlap(player, enemyCreatures[i]) {
-					if player.value >= enemyCreatures[i].value {
+					if player.Value >= enemyCreatures[i].Value {
 						//player absorbs enemy
-						player.value += enemyCreatures[i].value
+						player.Value += enemyCreatures[i].Value
 
 						//remove said enemy from slice
 						enemyCreatures = append(enemyCreatures[:i], enemyCreatures[i+1:]...)
